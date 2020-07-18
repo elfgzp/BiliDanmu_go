@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type DanMuMsg struct {
@@ -29,16 +30,69 @@ func NewDanmu() *DanMuMsg {
 	}
 }
 
+type GiftMsg struct {
+	Cmd string `json:"cmd"`
+	Data Gift `json:"data"`
+}
+
 type Gift struct {
-	UUname   string `json:"u_uname"`
-	Action   string `json:"action"`
-	Price    uint32 `json:"price"`
-	GiftName string `json:"gift_name"`
+	Draw int `json:"draw"`
+	Gold int `json:"gold"`
+	Silver int `json:"silver"`
+	Num int `json:"num"`
+	TotalCoin int `json:"total_coin"`
+	Effect int `json:"effect"`
+	BroadcastID int `json:"broadcast_id"`
+	CritProb int `json:"crit_prob"`
+	GuardLevel int `json:"guard_level"`
+	Rcost int `json:"rcost"`
+	UID int `json:"uid"`
+	Timestamp int `json:"timestamp"`
+	GiftID int `json:"giftId"`
+	GiftType int `json:"giftType"`
+	EventScore int `json:"eventScore"`
+	EventNum int `json:"eventNum"`
+	AddFollow int `json:"addFollow"`
+	Super int `json:"super"`
+	SuperGiftNum int `json:"super_gift_num"`
+	SuperBatchGiftNum int `json:"super_batch_gift_num"`
+	Remain int `json:"remain"`
+	Price int `json:"price"`
+	NewMedal int `json:"newMedal"`
+	NewTitle int `json:"newTitle"`
+	Title string `json:"title"`
+	Medal []interface{} `json:"medal"`
+	BeatID string `json:"beatId"`
+	BizSource string `json:"biz_source"`
+	Metadata string `json:"metadata"`
+	Action string `json:"action"`
+	CoinType string `json:"coin_type"`
+	Uname string `json:"uname"`
+	Face string `json:"face"`
+	BatchComboID string `json:"batch_combo_id"`
+	Rnd string `json:"rnd"`
+	GiftName string `json:"giftName"`
+	NoticeMsg []interface{} `json:"notice_msg"`
+	SmalltvMsg []interface{} `json:"smalltv_msg"`
+	ComboSend interface{} `json:"combo_send"`
+	BatchComboSend interface{} `json:"batch_combo_send"`
+	TagImage string `json:"tag_image"`
+	TopList []interface{} `json:"top_list"`
+	SendMaster interface{} `json:"send_master"`
+	IsFirst bool `json:"is_first"`
+	Demarcation int `json:"demarcation"`
+	ComboStayTime int `json:"combo_stay_time"`
+	ComboTotalCoin int `json:"combo_total_coin"`
+	Tid string `json:"tid"`
+	EffectBlock int `json:"effect_block"`
+	SmallTVCountFlag bool `json:"smallTVCountFlag"`
+	Capsule interface{} `json:"capsule"`
+	SpecialGift interface{} `json:"specialGift"`
 }
 
 func NewGift() *Gift {
 	return &Gift{
-		UUname:   "",
+		Uname:   "",
 		Action:   "",
 		Price:    0,
 		GiftName: "",
@@ -97,8 +151,8 @@ func (c *Client) SendPackage(packetlen uint32, magic uint16, ver uint16, typeID 
 	return
 }
 
-func (c *Client) ReceiveMsg() {
-	pool := NewPool()
+func (c *Client) ReceiveMsg(msgHandler PoolMsgHandler) {
+	pool := NewPool(msgHandler)
 	go pool.Handle()
 	for {
 		_, msg, err := c.conn.ReadMessage()
@@ -136,6 +190,8 @@ func (c *Client) ReceiveMsg() {
 						pool.UserGuard <- string(inflated[16:l])
 					case CMDEntry:
 						pool.UserEntry <- string(inflated[16:l])
+					default:
+						fmt.Printf("cmd %s content %s \n", c, string(inflated[16:l]))
 					}
 					inflated = inflated[l:]
 				}

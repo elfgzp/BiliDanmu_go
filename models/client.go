@@ -2,14 +2,14 @@ package models
 
 import (
 	"fmt"
+	"net/url"
+
 	"github.com/gorilla/websocket"
 	jsoniter "github.com/json-iterator/go"
-	"net/url"
 )
 
-var
-(
-	RealID      = "http://api.live.bilibili.com/room/v1/Room/room_init" 				// params: id=xxx
+var (
+	RealID      = "http://api.live.bilibili.com/room/v1/Room/room_init" // params: id=xxx
 	DanMuServer = "ks-live-dmcmt-bj6-pm-02.chat.bilibili.com:443"
 	keyUrl      = "https://api.live.bilibili.com/room/v1/Danmu/getConf"                 // params: room_id=xxx&platform=pc&player=web
 	roomInfoUrl = "https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom" // params: room_id=xxx
@@ -18,10 +18,11 @@ var
 
 // Client instance
 type Client struct {
-	Room      RoomInfo     `json:"room"`
-	Request   *RequestInfo `json:"request"`
-	conn      *websocket.Conn
-	Connected bool `json:"connected"`
+	Room       RoomInfo     `json:"room"`
+	Request    *RequestInfo `json:"request"`
+	conn       *websocket.Conn
+	Connected  bool `json:"connected"`
+	msgHandler PoolMsgHandler
 }
 
 // Basic information of the live room
@@ -61,17 +62,18 @@ func NewRequestInfo(roomid uint32) *RequestInfo {
 }
 
 // new websocket("wss)
-func NewClient(roomid uint32) (c *Client, err error) {
+func NewClient(roomid uint32, handler PoolMsgHandler) (c *Client, err error) {
 	return &Client{
 		Room:      GetRoomInfo(roomid),
 		Request:   NewRequestInfo(roomid),
 		conn:      nil,
 		Connected: false,
+		msgHandler: handler,
 	}, nil
 }
 
 func (c *Client) Start() (err error) {
-	u := url.URL{Scheme: "wss", Host: DanMuServer, Path: "/sub",}
+	u := url.URL{Scheme: "wss", Host: DanMuServer, Path: "/sub"}
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 
@@ -94,7 +96,7 @@ func (c *Client) Start() (err error) {
 		fmt.Println("SendPackage err,", err)
 		return
 	}
-	go c.ReceiveMsg()
+	go c.ReceiveMsg(c.msgHandler)
 	go c.HeartBeat()
 	return
 }

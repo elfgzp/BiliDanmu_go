@@ -5,6 +5,8 @@ import (
 	"compress/zlib"
 	"encoding/hex"
 	"fmt"
+	"github.com/google/logger"
+	"github.com/ulule/deepcopier"
 	"io"
 	"io/ioutil"
 	"math"
@@ -108,11 +110,15 @@ func (d *DanMuMsg) GetDanmuMsg(source []byte) {
 }
 
 func (g *Gift) GetGiftMsg(source []byte) {
-	g.UUname = json.Get(source, "data", "uname").ToString()
-	g.Action = json.Get(source, "data", "action").ToString()
-	nums := json.Get(source, "data", "num").ToUint32()
-	g.Price = json.Get(source, "data", "price").ToUint32() * nums
-	g.GiftName = json.Get(source, "data", "giftName").ToString()
+	gmsg := &GiftMsg{}
+	err := json.Unmarshal(source, gmsg)
+	if err != nil {
+		logger.Error("GetGiftMsg json unmarshl error %s", err)
+	}
+	err = deepcopier.Copy(gmsg.Data).To(g)
+	if err != nil {
+		logger.Error("GetGiftMsg Copy error %s", err)
+	}
 }
 
 // 返回字节数组表示数的十进制形式
